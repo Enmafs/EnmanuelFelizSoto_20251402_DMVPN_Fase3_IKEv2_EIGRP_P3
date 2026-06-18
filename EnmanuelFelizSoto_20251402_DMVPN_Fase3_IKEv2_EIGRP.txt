@@ -1,0 +1,256 @@
+! ============================================================
+! VPN Lab 08 - DMVPN Fase 3 + IKEv2 + EIGRP
+! Hub redirect + Spoke shortcut para optimizacion de rutas
+! Enmanuel Feliz Soto | Matricula: 2025-1402 | Seccion 2-1C
+! ITLA - Seguridad en Redes
+! ============================================================
+
+! ---- ISP ----
+enable
+configure terminal
+hostname ISP
+!
+ip cef
+!
+interface Ethernet0/0
+ description Link-to-R1-S1-HUB
+ ip address 20.25.8.1 255.255.255.252
+ no shutdown
+!
+interface Ethernet0/1
+ description Link-to-R4-S2-SPOKE1
+ ip address 20.25.8.5 255.255.255.252
+ no shutdown
+!
+interface Ethernet0/2
+ description Link-to-R5-SPOKE2
+ ip address 20.25.8.9 255.255.255.252
+ no shutdown
+!
+end
+
+! ---- R1-S1 (HUB) - con ip nhrp redirect ----
+enable
+configure terminal
+hostname R1-S1
+!
+ip cef
+!
+crypto ikev2 proposal IKEV2-PROPOSAL
+ encryption aes-cbc-256
+ integrity sha256
+ group 14
+!
+crypto ikev2 policy IKEV2-POLICY
+ proposal IKEV2-PROPOSAL
+!
+crypto ikev2 keyring IKEV2-KEYRING-DMVPN3
+ peer ANY
+  address 0.0.0.0 0.0.0.0
+  pre-shared-key Cisco2025-1402-DMVPN3!
+!
+crypto ikev2 profile IKEV2-PROFILE-DMVPN3
+ match identity remote address 0.0.0.0 0.0.0.0
+ authentication local pre-share
+ authentication remote pre-share
+ keyring local IKEV2-KEYRING-DMVPN3
+!
+crypto ipsec transform-set TS-DMVPN3 esp-aes 256 esp-sha256-hmac
+ mode transport
+!
+crypto ipsec profile DMVPN3-PROFILE
+ set transform-set TS-DMVPN3
+ set ikev2-profile IKEV2-PROFILE-DMVPN3
+!
+interface Tunnel0
+ description DMVPN3-mGRE-HUB
+ ip address 14.0.3.1 255.255.255.0
+ no ip redirects
+ ip nhrp authentication Cisco1403
+ ip nhrp map multicast dynamic
+ ip nhrp network-id 102026
+ ip nhrp redirect
+ ip nhrp holdtime 300
+ tunnel source Ethernet0/0
+ tunnel mode gre multipoint
+ tunnel key 102026
+ tunnel protection ipsec profile DMVPN3-PROFILE
+ no shutdown
+!
+interface Ethernet0/0
+ description WAN-to-ISP-HUB
+ ip address 20.25.8.2 255.255.255.252
+ no shutdown
+!
+interface Ethernet0/3
+ description LAN-HUB
+ ip address 10.14.17.1 255.255.255.0
+ no shutdown
+!
+router eigrp 1403
+ network 14.0.3.0 0.0.0.255
+ network 10.14.17.0 0.0.0.255
+ no auto-summary
+!
+ip route 0.0.0.0 0.0.0.0 20.25.8.1
+!
+end
+
+! ---- R4-S2 (SPOKE1) - con ip nhrp shortcut ----
+enable
+configure terminal
+hostname R4-S2
+!
+ip cef
+!
+crypto ikev2 proposal IKEV2-PROPOSAL
+ encryption aes-cbc-256
+ integrity sha256
+ group 14
+!
+crypto ikev2 policy IKEV2-POLICY
+ proposal IKEV2-PROPOSAL
+!
+crypto ikev2 keyring IKEV2-KEYRING-DMVPN3
+ peer HUB
+  address 20.25.8.2
+  pre-shared-key Cisco2025-1402-DMVPN3!
+!
+crypto ikev2 profile IKEV2-PROFILE-DMVPN3
+ match identity remote address 0.0.0.0 0.0.0.0
+ authentication local pre-share
+ authentication remote pre-share
+ keyring local IKEV2-KEYRING-DMVPN3
+!
+crypto ipsec transform-set TS-DMVPN3 esp-aes 256 esp-sha256-hmac
+ mode transport
+!
+crypto ipsec profile DMVPN3-PROFILE
+ set transform-set TS-DMVPN3
+ set ikev2-profile IKEV2-PROFILE-DMVPN3
+!
+interface Tunnel0
+ description DMVPN3-mGRE-SPOKE1
+ ip address 14.0.3.2 255.255.255.0
+ no ip redirects
+ ip nhrp authentication Cisco1403
+ ip nhrp map 14.0.3.1 20.25.8.2
+ ip nhrp map multicast 20.25.8.2
+ ip nhrp network-id 102026
+ ip nhrp nhs 14.0.3.1
+ ip nhrp shortcut
+ ip nhrp holdtime 300
+ tunnel source Ethernet0/1
+ tunnel mode gre multipoint
+ tunnel key 102026
+ tunnel protection ipsec profile DMVPN3-PROFILE
+ no shutdown
+!
+interface Ethernet0/1
+ description WAN-to-ISP-SPOKE1
+ ip address 20.25.8.6 255.255.255.252
+ no shutdown
+!
+interface Ethernet0/0
+ description LAN-SPOKE1
+ ip address 10.14.27.1 255.255.255.0
+ no shutdown
+!
+router eigrp 1403
+ network 14.0.3.0 0.0.0.255
+ network 10.14.27.0 0.0.0.255
+ no auto-summary
+!
+ip route 0.0.0.0 0.0.0.0 20.25.8.5
+!
+end
+
+! ---- R5 (SPOKE2) - con ip nhrp shortcut ----
+enable
+configure terminal
+hostname R5
+!
+ip cef
+!
+crypto ikev2 proposal IKEV2-PROPOSAL
+ encryption aes-cbc-256
+ integrity sha256
+ group 14
+!
+crypto ikev2 policy IKEV2-POLICY
+ proposal IKEV2-PROPOSAL
+!
+crypto ikev2 keyring IKEV2-KEYRING-DMVPN3
+ peer HUB
+  address 20.25.8.2
+  pre-shared-key Cisco2025-1402-DMVPN3!
+!
+crypto ikev2 profile IKEV2-PROFILE-DMVPN3
+ match identity remote address 0.0.0.0 0.0.0.0
+ authentication local pre-share
+ authentication remote pre-share
+ keyring local IKEV2-KEYRING-DMVPN3
+!
+crypto ipsec transform-set TS-DMVPN3 esp-aes 256 esp-sha256-hmac
+ mode transport
+!
+crypto ipsec profile DMVPN3-PROFILE
+ set transform-set TS-DMVPN3
+ set ikev2-profile IKEV2-PROFILE-DMVPN3
+!
+interface Tunnel0
+ description DMVPN3-mGRE-SPOKE2
+ ip address 14.0.3.3 255.255.255.0
+ no ip redirects
+ ip nhrp authentication Cisco1403
+ ip nhrp map 14.0.3.1 20.25.8.2
+ ip nhrp map multicast 20.25.8.2
+ ip nhrp network-id 102026
+ ip nhrp nhs 14.0.3.1
+ ip nhrp shortcut
+ ip nhrp holdtime 300
+ tunnel source Ethernet0/0
+ tunnel mode gre multipoint
+ tunnel key 102026
+ tunnel protection ipsec profile DMVPN3-PROFILE
+ no shutdown
+!
+interface Ethernet0/0
+ description WAN-to-ISP-SPOKE2
+ ip address 20.25.8.10 255.255.255.252
+ no shutdown
+!
+interface Ethernet0/1
+ description Trunk-to-SW
+ no ip address
+ no shutdown
+!
+interface Ethernet0/1.10
+ description VLAN10-SPOKE2
+ encapsulation dot1Q 10
+ ip address 10.14.37.1 255.255.255.128
+!
+interface Ethernet0/1.20
+ description VLAN20-SPOKE2
+ encapsulation dot1Q 20
+ ip address 10.14.37.129 255.255.255.128
+!
+router eigrp 1403
+ network 14.0.3.0 0.0.0.255
+ network 10.14.37.0 0.0.0.255
+ no auto-summary
+!
+ip route 0.0.0.0 0.0.0.0 20.25.8.9
+!
+end
+
+! ---- Verificacion DMVPN Fase 3 ----
+show dmvpn
+show ip nhrp
+show ip eigrp neighbors
+show crypto ikev2 sa
+
+! Prueba shortcut spoke-to-spoke:
+ping 10.14.37.1 source 10.14.27.1
+show ip nhrp
+! Debe mostrar entrada con flag 'nhop' = shortcut hacia el otro spoke
