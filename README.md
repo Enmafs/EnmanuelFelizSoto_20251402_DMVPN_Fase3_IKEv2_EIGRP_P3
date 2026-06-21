@@ -1,5 +1,4 @@
 # 🔐 Lab 08 — DMVPN Fase 3 + IKEv2 + EIGRP
-
 **Estudiante:** Enmanuel Feliz Soto | **Matrícula:** 2025-1402  
 **Institución:** Instituto Tecnológico de Las Américas (ITLA)  
 **Curso:** Seguridad en Redes | **Sección:** 2-1C  
@@ -9,57 +8,75 @@
 
 ## 📋 Descripción
 
-DMVPN Fase 3 mejora Fase 2 con ip nhrp redirect en el Hub e ip nhrp shortcut en los Spokes, optimizando el routing para tráfico Spoke-to-Spoke.
+DMVPN Fase 3 mejora Fase 2 con `ip nhrp redirect` en el Hub e `ip nhrp shortcut` en los Spokes. El Hub solo participa en la señalización NHRP; el tráfico Spoke-to-Spoke va directo via CEF shortcut sin pasar por el Hub. IKEv2 reemplaza a IKEv1 con negociación más eficiente y menor número de mensajes.
 
 | Campo | Valor |
 |-------|-------|
 | **Tipo de VPN** | DMVPN Hub-and-Spoke Optimizado |
 | **Protocolo** | IKEv2 + IPSec ESP-AES256-SHA256 (mode transport) + mGRE |
-| **Mecanismo** | NHRP redirect (HUB) + NHRP shortcut (Spokes) + IKEv2 |
-| **Routing** | EIGRP AS 1403 sobre Tunnel0 mGRE |
-| **Pre-shared Key** | `Cisco2025-1402-DMVPN3!` |
+| **Mecanismo** | NHRP redirect (Hub) + NHRP shortcut (Spokes) + IKEv2 |
+| **Routing** | EIGRP AS 100 sobre Tunnel0 mGRE |
+| **Pre-shared Key** | `Cisco123` |
 
 ---
 
 ## 🗺️ Topología
 
 > 📸 **[INSERTAR CAPTURA DE TOPOLOGÍA AQUÍ]**
-
 <!-- Coloca aquí el screenshot de PNetLab con la topología del Lab 08 -->
 
 **Entorno:** PNetLab — Cisco IOL  
-**Peers:** HUB R1-S1 (20.25.8.2) | SPOKE1 R4-S2 (20.25.8.6) | SPOKE2 R5 (20.25.8.10)
+**Peers:** HUB ISP (14.2.10.1) | SPOKE1 R1-S1 (14.2.10.2) | SPOKE2 R3 (14.2.10.3)
 
 ### Tabla de Direccionamiento
 
-| Rol | Router | IP WAN | IP Tunnel | LAN |
-|-----|--------|--------|-----------|-----|
-| HUB | R1-S1 | 20.25.8.2/30 | 14.0.3.1/24/24 | 10.14.17.0/24 (HUB) |
-| SPOKE1 | R4-S2 | 20.25.8.6/30 | 14.0.3.2/24 | 10.14.27.0/24 (SPOKE1) |
-| SPOKE2 | R5 | 20.25.8.10/30 | 14.0.3.3/24 | 10.14.37.0/25 VLAN10 + 10.14.37.128/25 VLAN20 (SPOKE2) |
+| Rol | Router | Interfaz WAN | IP WAN | IP Tunnel | LAN |
+|-----|--------|-------------|--------|-----------|-----|
+| HUB | ISP | e0/0 | 20.25.1.1/30 | 14.2.10.1/24 | — |
+| SPOKE1 | R1-S1 | e0/0 | 20.25.1.2/30 | 14.2.10.2/24 | — |
+| SPOKE2 | R3 | e0/0 | 20.25.2.6/30 | 14.2.10.3/24 | 30.30.30.0/24 |
 
-### ISP
+### ISP (Hub)
 
-| Interfaz ISP | IP | Descripción |
-|-------------|-----|-------------|
-| Ethernet0/0 | 20.25.8.1/30 | Link to R1-S1 HUB |
-| Ethernet0/1 | 20.25.8.5/30 | Link to R4-S2 SPOKE1 |
-| Ethernet0/2 | 20.25.8.9/30 | Link to R5 SPOKE2 |
+| Interfaz | IP | Descripción |
+|---------|-----|-------------|
+| Ethernet0/0 | 20.25.1.1/30 | Link to R1-S1 (Spoke1) y transit hacia R3 |
+| Tunnel0 | 14.2.10.1/24 | mGRE Hub DMVPN |
+
+### R1-S1 (Spoke1 + Transit para R3)
+
+| Interfaz | IP | Descripción |
+|---------|-----|-------------|
+| Ethernet0/0 | 20.25.1.2/30 | Link to ISP Hub |
+| Ethernet0/2 | 20.25.2.5/30 | Link to R3 (transit) |
+| Tunnel0 | 14.2.10.2/24 | GRE Spoke1 DMVPN |
+
+### R3 (Spoke2)
+
+| Interfaz | IP | Descripción |
+|---------|-----|-------------|
+| Ethernet0/0 | 20.25.2.6/30 | Link to R1-S1 (transit hacia ISP) |
+| Ethernet0/1 | 30.30.30.1/24 | LAN local |
+| Tunnel0 | 14.2.10.3/24 | GRE Spoke2 DMVPN |
 
 ### Dirección Túnel
-| Endpoint | IP Tunnel |
-|----------|-----------|
 
+| Endpoint | IP Tunnel | NBMA (física) |
+|----------|-----------|---------------|
+| ISP (Hub) | 14.2.10.1 | 20.25.1.1 |
+| R1-S1 (Spoke1) | 14.2.10.2 | 20.25.1.2 |
+| R3 (Spoke2) | 14.2.10.3 | 20.25.2.6 |
 
+> **Nota:** R3 llega al Hub ISP pasando por R1-S1 como router de tránsito. El tunnel source de R3 es `e0/0` (20.25.2.6); NHRP registra esa IP como NBMA ante el Hub.
 
 ---
 
 ## ⚙️ Configuración
 
 El script completo de configuración se encuentra en:  
-📄 [`Lab08_DMVPN_Fase3_IKEv2_EIGRP.txt`](./Lab08_DMVPN_Fase3_IKEv2_EIGRP.txt)
+📄 [`EnmanuelFelizSoto_2025-1402_Lab08_P3.txt`](./EnmanuelFelizSoto_2025-1402_Lab08_P3.txt)
 
-### Parámetros IKE/IPSec
+### Parámetros IKEv2/IPSec
 
 | Parámetro | Valor |
 |-----------|-------|
@@ -67,18 +84,34 @@ El script completo de configuración se encuentra en:
 | Hash/Integrity | SHA-256 |
 | DH Group | 14 (2048-bit) |
 | SA Lifetime (IKE) | 86400 s (24h) |
-| SA Lifetime (IPSec) | 3600 s (1h) |
-| PFS | Group 14 |
 | Auth Method | Pre-Shared Key |
+| IPSec Mode | Transport |
+| Transform-set | esp-aes 256 esp-sha256-hmac |
+| IKEv2 Proposal | PROP_IKEv2 |
+| IKEv2 Keyring | KEYRING_DMVPN |
+| IKEv2 Profile | PROF_IKEv2 |
+
+### Parámetros NHRP
+
+| Parámetro | Valor |
+|-----------|-------|
+| Network-ID | 100 |
+| Authentication | NHRP2024 |
+| Holdtime | 600 s |
+| NHS (Hub) | 14.2.10.1 |
+| Tunnel mode | gre multipoint |
+| Hub | `ip nhrp redirect` |
+| Spokes | `ip nhrp shortcut` |
 
 ---
 
 ## ▶️ Procedimiento de Ejecución
 
 ### 1. Cargar configuración en PNetLab
+
 ```
-# Aplicar configuración en cada dispositivo en el orden:
-# 1. ISP → 2. R1-S1 → 3. R4-S2 → 4. R5
+# Aplicar configuración en cada dispositivo en este orden:
+# 1. ISP (Hub) → 2. R1-S1 (Spoke1) → 3. R3 (Spoke2)
 ```
 
 ### 2. Verificar la VPN
@@ -87,7 +120,13 @@ El script completo de configuración se encuentra en:
 show dmvpn
 ```
 ```
+show dmvpn detail
+```
+```
 show ip nhrp
+```
+```
+show ip nhrp detail
 ```
 ```
 show ip eigrp neighbors
@@ -95,31 +134,66 @@ show ip eigrp neighbors
 ```
 show crypto ikev2 sa
 ```
+```
+show crypto ipsec sa
+```
 
 ### 3. Prueba de conectividad
+
 ```
-ping 10.14.37.1 source 10.14.27.1
+ping 14.2.10.1 source Tunnel0
 ```
+```
+ping 14.2.10.3 source Tunnel0
+```
+```
+ping 30.30.30.1
+```
+
+### 4. Verificar shortcut Fase 3 (diferenciador clave)
+
+```
+show ip nhrp detail
+```
+```
+show ip cef 30.30.30.0
+```
+
+> El flag `shortcut` en `show ip nhrp detail` y la entrada CEF directa confirman que el tráfico Spoke-to-Spoke no pasa por el Hub.
 
 ---
 
 ## 📸 Capturas de Verificación
 
-> 📸 **[INSERTAR CAPTURA: show crypto ikev2 sa]**
+> 📸 **[INSERTAR CAPTURA: show dmvpn]**
+<!-- Captura mostrando spokes registrados con estado UP -->
 
-<!-- Captura mostrando el estado QM_IDLE / ESTABLISHED -->
+> 📸 **[INSERTAR CAPTURA: show crypto ikev2 sa]**
+<!-- Captura mostrando estado READY -->
 
 > 📸 **[INSERTAR CAPTURA: show crypto ipsec sa]**
-
 <!-- Captura mostrando pkts encaps/decaps incrementando -->
 
-> 📸 **[INSERTAR CAPTURA: ping exitoso]**
+> 📸 **[INSERTAR CAPTURA: show ip nhrp detail con flag shortcut]**
+<!-- Captura mostrando el shortcut instalado en CEF -->
 
-<!-- Captura del ping source 10.14.17.0/24 (HUB) -->
+> 📸 **[INSERTAR CAPTURA: ping exitoso]**
+<!-- Ping desde R1-S1 hacia 30.30.30.1 (LAN de R3) -->
 
 ---
 
 ## 🔍 Análisis y Comparativa
+
+### Diferencia clave Fase 2 vs Fase 3
+
+| Característica | Fase 2 | Fase 3 |
+|----------------|--------|--------|
+| Hub en path de datos | Sí (inicial) | No — solo señaliza |
+| Comando Hub | — | `ip nhrp redirect` |
+| Comando Spokes | — | `ip nhrp shortcut` |
+| IKE | IKEv1 (`crypto isakmp`) | IKEv2 (`crypto ikev2`) |
+| CEF shortcut | No | Sí |
+| Escalabilidad | Media | Alta |
 
 ### Ventajas de este tipo de VPN
 - Ver documentación técnica en el informe PDF
@@ -134,8 +208,8 @@ ping 10.14.37.1 source 10.14.27.1
 | Recurso | Enlace |
 |---------|--------|
 | Repositorio Principal | [Enmafs/NetSec](https://github.com/Enmafs/NetSec) |
-| Script de configuración | [`Lab08_DMVPN_Fase3_IKEv2_EIGRP.txt`](./Lab08_DMVPN_Fase3_IKEv2_EIGRP.txt) |
-| Video demostración | 🎬 **[PENDIENTE — agregar link de YouTube]** |
+| Script de configuración | [`EnmanuelFelizSoto_2025-1402_DMVPN_Fase3_IKEv2_EIGRP_P3.txt`](./EnmanuelFelizSoto_2025-1402_DMVPN_Fase3_IKEv2_EIGRP_P3.txt) |
+| Video demostración | 🎬 [Aquí](https://youtu.be/qR8-BsUhoFk) |
 
 ---
 
