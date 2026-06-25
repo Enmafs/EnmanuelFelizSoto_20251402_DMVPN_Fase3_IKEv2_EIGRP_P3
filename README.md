@@ -22,7 +22,8 @@ DMVPN Fase 3 mejora Fase 2 con `ip nhrp redirect` en el Hub e `ip nhrp shortcut`
 
 ## 🗺️ Topología
 
-> 📸 **[INSERTAR CAPTURA DE TOPOLOGÍA AQUÍ]**
+> 📸 <img width="1472" height="805" alt="Captura de pantalla 2026-06-21 154657" src="https://github.com/user-attachments/assets/be058c52-a43b-4421-b27e-db18979ca4c7" />
+
 <!-- Coloca aquí el screenshot de PNetLab con la topología del Lab 08 -->
 
 **Entorno:** PNetLab — Cisco IOL  
@@ -165,19 +166,20 @@ show ip cef 30.30.30.0
 
 ## 📸 Capturas de Verificación
 
-> 📸 **[INSERTAR CAPTURA: show dmvpn]**
+> 📸 <img width="561" height="249" alt="image" src="https://github.com/user-attachments/assets/da0ed2bc-ea83-458e-a0e0-6e0e6e62d41b" />
+
 <!-- Captura mostrando spokes registrados con estado UP -->
 
-> 📸 **[INSERTAR CAPTURA: show crypto ikev2 sa]**
-<!-- Captura mostrando estado READY -->
+> 📸 <img width="794" height="215" alt="image" src="https://github.com/user-attachments/assets/793fe9dc-6562-419e-acd2-5f80442a8a5d" />
 
-> 📸 **[INSERTAR CAPTURA: show crypto ipsec sa]**
 <!-- Captura mostrando pkts encaps/decaps incrementando -->
 
-> 📸 **[INSERTAR CAPTURA: show ip nhrp detail con flag shortcut]**
+> 📸 <img width="388" height="129" alt="image" src="https://github.com/user-attachments/assets/9fbd685a-a046-40d5-9085-e8f68739663b" />
+
 <!-- Captura mostrando el shortcut instalado en CEF -->
 
-> 📸 **[INSERTAR CAPTURA: ping exitoso]**
+> 📸 <img width="471" height="87" alt="image" src="https://github.com/user-attachments/assets/e48f1f91-5823-48a3-82ba-c1f1459978ff" />
+
 <!-- Ping desde R1-S1 hacia 30.30.30.1 (LAN de R3) -->
 
 ---
